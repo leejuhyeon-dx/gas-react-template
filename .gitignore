@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# clasp (contains script ID)
+.clasp.json
+.clasprc.json
+
+# Logs
+*.log
+
+# TypeScript cache
+*.tsbuildinfo

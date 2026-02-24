@@ -1,0 +1,37 @@
+{
+  "name": "gas-react-template",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Minimal template for building web apps on Google Apps Script with React",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "push": "node scripts/build.mjs && pnpm exec clasp push --force",
+    "deploy": "node scripts/deploy.mjs dev",
+    "deploy:dev": "node scripts/deploy.mjs dev",
+    "deploy:production": "node scripts/deploy.mjs production"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^7.13.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.29.0",
+    "@babel/plugin-transform-template-literals": "^7.27.1",
+    "@google/clasp": "^3.2.0",
+    "@types/google-apps-script": "^2.0.8",
+    "@types/react": "^18.3.28",
+    "@types/react-dom": "^18.3.7",
+    "autoprefixer": "^10.4.24",
+    "esbuild": "^0.27.3",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5.9.3"
+  },
+  "author": "juhyeonni",
+  "license": "MIT",
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  }
+}

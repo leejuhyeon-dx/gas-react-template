@@ -1,0 +1,37 @@
+---
+description: Project-wide code and file conventions, English-only output
+alwaysApply: true
+---
+
+# Project Conventions
+
+Common code and file conventions for this project.
+
+## Code / File Conventions
+
+- **File names and code**: Write in English
+- **Comments**: English only
+- **Variable/function names**: English
+- **Commit messages**: English, conventional commits format
+
+## 6-Phase Workflow
+
+Every feature/task MUST follow 6 phases in order:
+
+```
+Phase 1: Requirements -> Phase 2: Design (Diagrams) -> Phase 3: Edge Cases
+-> Phase 4: Implementation (TDD) -> Phase 5: Debug -> Phase 6: Release
+```
+
+NEVER skip phases. NEVER start coding before Phase 3 is complete.
+
+## Rule Priority
+
+- Specialized rules in `.cursor/rules/` override this file
+- Example: For diagram creation, follow `diagram-specialist.mdc`
+
+## References
+
+- **Skills list and usage**: `.cursor/SKILLS-INITIALIZATION.md`
+- **Detailed rules**: `.cursor/rules/*.mdc`
+- **Skills**: `.cursor/skills/*/SKILL.md`

@@ -1,0 +1,11 @@
+{
+  "github": {
+    "project": {
+      "number": {PROJECT_NUMBER},
+      "id": "{PROJECT_ID}",
+      "url": "{PROJECT_URL}",
+      "owner": "@me"
+    },
+    "repository": "{REPOSITORY}"
+  }
+}

@@ -1,0 +1,61 @@
+---
+description: Enforces the 6-phase development workflow. Applied when starting any development task, feature, or bugfix.
+alwaysApply: true
+---
+
+# Workflow Enforcement
+
+You MUST enforce the 6-phase development workflow for all development tasks.
+
+## CRITICAL RULES
+
+- **MANDATORY ORDER**: Phase 1 -> 2 -> 3 -> 4 -> 5 -> 6 (NO SKIPPING)
+- **NEVER** start coding before Phase 3 (Edge Case Analysis) is complete
+- **NEVER** skip Phase 2 diagrams -- visual design prevents costly rework
+- **ALWAYS** get user confirmation at Phase 1, 2, and 3 before proceeding
+
+## Phase Gates
+
+| Phase | Gate | Must Complete Before |
+| ----- | ---- | -------------------- |
+| 1. Requirements Definition | User confirms requirements | Phase 2 |
+| 2. Design (Diagrams) | User confirms Use Case + Process Flow | Phase 3 |
+| 3. Edge Case Analysis | User confirms edge case list | Phase 4 |
+| 4. Implementation (TDD) | All tests pass | Phase 5 |
+| 5. Debug & Verification | Full verification passes | Phase 6 |
+| 6. Release | PR merged | Done |
+
+## Phase 2: Required Diagrams
+
+Phase 2 requires TWO diagrams created via `figjam-diagram` skill:
+
+1. **Use Case Diagram** - Who does what (actors + actions)
+2. **Process Flow Diagram** - How it works step-by-step (with decision nodes)
+
+Both diagrams must use Figma MCP's `generate_diagram` tool.
+
+## Phase 4: TDD Required
+
+Implementation must follow TDD cycle:
+1. Write tests FIRST based on requirements + edge cases (RED)
+2. Implement minimum code to pass tests (GREEN)
+3. Refactor while keeping tests green (REFACTOR)
+
+## Output Documents
+
+Each feature creates:
+```
+docs/workflow/{feature-name}/
+  01-requirements.md      # Phase 1
+  02-design.md            # Phase 2
+  03-edge-cases.md        # Phase 3
+
+docs/diagrams/
+  mermaid/*.mmd           # Mermaid source files
+  plans/*.plan.md         # Diagram plans
+```
+
+## Related Skills
+
+- **`development-workflow` skill**: Full 6-phase workflow with detailed steps
+- **`figjam-diagram` skill**: Diagram creation for Phase 2
