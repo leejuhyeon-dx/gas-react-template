@@ -11,14 +11,40 @@
 const SHEET_NAME = 'Counter'
 const COUNTER_CELL = 'A1'
 
+/**
+ * Get spreadsheet by script property or bound spreadsheet.
+ * - Bound script: uses getActiveSpreadsheet()
+ * - Standalone script: reads SPREADSHEET_ID from script properties
+ */
+function getSpreadsheet(): GoogleAppsScript.Spreadsheet.Spreadsheet {
+  const active = SpreadsheetApp.getActiveSpreadsheet()
+  if (active) return active
+
+  const id = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID')
+  if (!id) {
+    throw new Error(
+      'SPREADSHEET_ID not set. Run: pnpm run setup:sheet <spreadsheet-id>'
+    )
+  }
+  return SpreadsheetApp.openById(id)
+}
+
 function getSheet(): GoogleAppsScript.Spreadsheet.Sheet {
-  const ss = SpreadsheetApp.getActiveSpreadsheet()
+  const ss = getSpreadsheet()
   let sheet = ss.getSheetByName(SHEET_NAME)
   if (!sheet) {
     sheet = ss.insertSheet(SHEET_NAME)
     sheet.getRange(COUNTER_CELL).setValue(0)
   }
   return sheet
+}
+
+/**
+ * Set spreadsheet ID as script property (called from setup:sheet script).
+ */
+export function setSpreadsheetId(id: string): { success: boolean; id: string } {
+  PropertiesService.getScriptProperties().setProperty('SPREADSHEET_ID', id)
+  return { success: true, id }
 }
 
 function getCount(): number {

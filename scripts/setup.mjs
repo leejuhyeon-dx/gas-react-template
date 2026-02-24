@@ -133,11 +133,32 @@ async function main() {
     }
   }
 
+  // 8. Ask for spreadsheet ID
+  console.log('')
+  const sheetId = await prompt('スプレッドシートID (スキップ: Enter): ')
+
+  if (sheetId) {
+    console.log('\n📋 SPREADSHEET_ID を設定中...')
+    console.log(`   GASエディタで手動設定してください:`)
+    console.log(`   1. https://script.google.com/d/${config.scriptId}/edit を開く`)
+    console.log(`   2. エディタの実行ログ/コンソールで以下を実行:`)
+    console.log('')
+    console.log(`      PropertiesService.getScriptProperties().setProperty('SPREADSHEET_ID', '${sheetId}')`)
+    console.log('')
+    config.spreadsheetId = sheetId
+    writeFileSync(CLASP_JSON, JSON.stringify(config, null, 4) + '\n', 'utf-8')
+    console.log('   (参考用に .clasp.json にも保存しました)')
+  }
+
   const deployId = config.deploymentIdDev
   console.log('\n🎉 セットアップ完了！')
   console.log(`   エディタ:  https://script.google.com/d/${config.scriptId}/edit`)
   if (deployId) {
     console.log(`   Webアプリ: https://script.google.com/macros/s/${deployId}/exec`)
+  }
+  if (!sheetId) {
+    console.log(`\n   ⚠️  スプレッドシート未設定。後で設定:`)
+    console.log(`   pnpm run setup:sheet <spreadsheet-id>`)
   }
   console.log(`\n   次のステップ:`)
   console.log(`   pnpm run deploy   # 再デプロイ`)
