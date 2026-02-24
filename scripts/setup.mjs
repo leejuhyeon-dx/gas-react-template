@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 /**
  * Setup script: create a new GAS webapp project.
- * - Checks clasp login
- * - Runs clasp create --type webapp
- * - Builds and pushes initial code
+ * 1. Check/perform clasp login
+ * 2. clasp create (standalone)
+ * 3. Build
+ * 4. clasp push (pushes appsscript.json with webapp config)
+ * 5. clasp deploy
  */
 
 import { execSync, spawnSync } from 'child_process'
-import { existsSync, readFileSync, writeFileSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync, unlinkSync } from 'fs'
 import * as readline from 'readline'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
@@ -29,6 +31,26 @@ function prompt(question) {
   })
 }
 
+function run(cmd, opts = {}) {
+  return spawnSync('pnpm', ['exec', ...cmd.split(' ')], {
+    cwd: ROOT,
+    encoding: 'utf-8',
+    ...opts,
+  })
+}
+
+async function ensureLogin() {
+  const check = run('clasp login --status')
+  const output = (check.stdout || '') + (check.stderr || '')
+  if (output.includes('not logged in') || check.status !== 0) {
+    console.log('📋 claspにログインしていません。ログインを開始します...\n')
+    execSync('pnpm exec clasp login', { cwd: ROOT, stdio: 'inherit' })
+    console.log('')
+  } else {
+    console.log('✅ clasp ログイン済み')
+  }
+}
+
 async function main() {
   console.log('\n🚀 GAS + React Template Setup\n')
 
@@ -36,68 +58,76 @@ async function main() {
   if (existsSync(CLASP_JSON)) {
     const config = JSON.parse(readFileSync(CLASP_JSON, 'utf-8'))
     if (config.scriptId && config.scriptId !== 'YOUR_SCRIPT_ID_HERE') {
-      console.log(`⚠️  .clasp.json already exists (scriptId: ${config.scriptId})`)
-      const answer = await prompt('Overwrite and create a new project? (y/N): ')
+      console.log(`⚠️  .clasp.json が既に存在します (scriptId: ${config.scriptId})`)
+      const answer = await prompt('上書きして新しいプロジェクトを作成しますか？ (y/N): ')
       if (answer.toLowerCase() !== 'y') {
-        console.log('Cancelled.')
+        console.log('キャンセルしました。')
         process.exit(0)
       }
+      unlinkSync(CLASP_JSON)
     }
   }
 
-  // Check clasp login
-  const loginCheck = spawnSync('pnpm', ['exec', 'clasp', 'login', '--status'], {
-    cwd: ROOT,
-    encoding: 'utf-8',
-  })
-  if (loginCheck.status !== 0 || loginCheck.stdout.includes('not logged in')) {
-    console.log('📋 Not logged in to clasp. Starting login...\n')
-    execSync('pnpm exec clasp login', { cwd: ROOT, stdio: 'inherit' })
-  }
+  // 1. Login
+  await ensureLogin()
 
-  // Get project title
-  const title = (await prompt('Project title (default: "GAS React App"): ')) || 'GAS React App'
+  // 2. Get project title
+  const title = (await prompt('プロジェクト名 (デフォルト: "GAS React App"): ')) || 'GAS React App'
 
-  // Create webapp project
-  console.log(`\n📦 Creating GAS webapp project: "${title}"...`)
-  const result = spawnSync(
-    'pnpm',
-    ['exec', 'clasp', 'create', '--type', 'webapp', '--title', title, '--rootDir', 'build'],
-    { cwd: ROOT, encoding: 'utf-8' }
-  )
+  // 3. Create standalone script (appsscript.json provides webapp config)
+  console.log(`\n📦 GASプロジェクトを作成中: "${title}"...`)
+  const result = run(`clasp create --title ${title}`)
 
   if (result.status !== 0) {
-    console.error('❌ Failed to create project:')
-    process.stderr.write(result.stderr)
+    console.error('❌ プロジェクト作成に失敗しました:')
+    process.stderr.write(result.stderr || '')
+    process.stdout.write(result.stdout || '')
     process.exit(1)
   }
-  process.stdout.write(result.stdout)
+  process.stdout.write(result.stdout || '')
 
-  // Verify .clasp.json was created
+  // clasp create writes .clasp.json to cwd
   if (!existsSync(CLASP_JSON)) {
-    console.error('❌ .clasp.json was not created.')
+    console.error('❌ .clasp.json が作成されませんでした。')
     process.exit(1)
   }
 
+  // 4. Set rootDir to build
   const config = JSON.parse(readFileSync(CLASP_JSON, 'utf-8'))
-  console.log(`✅ Project created (scriptId: ${config.scriptId})`)
+  config.rootDir = 'build'
+  writeFileSync(CLASP_JSON, JSON.stringify(config, null, 4) + '\n', 'utf-8')
+  console.log(`✅ プロジェクト作成完了 (scriptId: ${config.scriptId})`)
 
-  // Ensure rootDir is set
-  if (!config.rootDir) {
-    config.rootDir = 'build'
-    writeFileSync(CLASP_JSON, JSON.stringify(config, null, 4) + '\n', 'utf-8')
-  }
-
-  // Build and push
-  console.log('\n📦 Building and pushing initial code...')
+  // 5. Build
+  console.log('\n📦 ビルド中...')
   execSync('node scripts/build.mjs', { cwd: ROOT, stdio: 'inherit' })
+
+  // 6. Push (sends Code.gs + index.html + app.html + appsscript.json with webapp config)
+  console.log('\n📦 GASにプッシュ中...')
   execSync('pnpm exec clasp push --force', { cwd: ROOT, stdio: 'inherit' })
 
-  console.log(`\n🎉 Setup complete!`)
-  console.log(`   Editor: https://script.google.com/d/${config.scriptId}/edit`)
-  console.log(`\n   Next steps:`)
-  console.log(`   1. pnpm run deploy        # Deploy as dev`)
-  console.log(`   2. pnpm exec clasp open   # Open in browser`)
+  // 7. Deploy
+  console.log('\n📦 デプロイ中...')
+  const deployResult = run('clasp deploy --description "Initial deployment"')
+  if (deployResult.status === 0) {
+    process.stdout.write(deployResult.stdout || '')
+    // Parse deployment ID
+    const match = (deployResult.stdout || '').match(/^-\s+(\S+)\s+@/m)
+    if (match) {
+      config.deploymentIdDev = match[1]
+      writeFileSync(CLASP_JSON, JSON.stringify(config, null, 4) + '\n', 'utf-8')
+    }
+  }
+
+  const deployId = config.deploymentIdDev
+  console.log('\n🎉 セットアップ完了！')
+  console.log(`   エディタ:  https://script.google.com/d/${config.scriptId}/edit`)
+  if (deployId) {
+    console.log(`   Webアプリ: https://script.google.com/macros/s/${deployId}/exec`)
+  }
+  console.log(`\n   次のステップ:`)
+  console.log(`   pnpm run deploy   # 再デプロイ`)
+  console.log(`   pnpm exec clasp open  # エディタを開く`)
 }
 
 main().catch((err) => {
