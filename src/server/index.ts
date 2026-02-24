@@ -76,6 +76,13 @@ export function apiGet(
     case 'getCount':
       return { count: getCount() }
 
+    case 'getConfig': {
+      const props = PropertiesService.getScriptProperties()
+      return {
+        spreadsheetId: props.getProperty('SPREADSHEET_ID') || '',
+      }
+    }
+
     case 'ping':
       return { message: 'pong', timestamp: new Date().toISOString() }
 
@@ -105,6 +112,13 @@ export function apiPost(
     case 'setCount': {
       const value = Number(data.value) || 0
       return { count: setCount(value) }
+    }
+
+    case 'setSpreadsheetId': {
+      const id = String(data.id || '').trim()
+      if (!id) throw new Error('Spreadsheet ID is required')
+      PropertiesService.getScriptProperties().setProperty('SPREADSHEET_ID', id)
+      return { success: true, spreadsheetId: id }
     }
 
     default:

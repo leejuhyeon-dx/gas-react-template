@@ -21,11 +21,14 @@ const isGas = typeof google !== 'undefined' && !!google?.script?.run
 
 // --- Mock API (dev mode) ---
 let mockCount = 0
+let mockSpreadsheetId = 'mock-spreadsheet-id'
 
 function mockApiGet(action: string, _params?: Record<string, string>): unknown {
   switch (action) {
     case 'getCount':
       return { count: mockCount }
+    case 'getConfig':
+      return { spreadsheetId: mockSpreadsheetId }
     case 'ping':
       return { message: 'pong', timestamp: new Date().toISOString() }
     default:
@@ -45,6 +48,9 @@ function mockApiPost(action: string, data?: Record<string, unknown>): unknown {
     case 'setCount':
       mockCount = Number(data?.value) || 0
       return { count: mockCount }
+    case 'setSpreadsheetId':
+      mockSpreadsheetId = String(data?.id || '')
+      return { success: true, spreadsheetId: mockSpreadsheetId }
     default:
       throw new Error(`Unknown POST action: ${action}`)
   }
