@@ -5,6 +5,7 @@
   "description": "Minimal template for building web apps on Google Apps Script with React",
   "type": "module",
   "scripts": {
+    "setup": "node scripts/setup.mjs",
     "build": "node scripts/build.mjs",
     "push": "node scripts/build.mjs && pnpm exec clasp push --force",
     "deploy": "node scripts/deploy.mjs dev",
