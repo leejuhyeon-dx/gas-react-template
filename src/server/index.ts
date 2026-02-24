@@ -29,7 +29,7 @@ function getSpreadsheet(): GoogleAppsScript.Spreadsheet.Spreadsheet {
   }
 
   throw new Error(
-    'SPREADSHEET_ID not configured. Set via: settings page, script property, or .clasp.json'
+    'SPREADSHEET_ID not configured. Run: pnpm run setup:sheet <spreadsheet-id>'
   )
 }
 
@@ -43,13 +43,6 @@ function getSheet(): GoogleAppsScript.Spreadsheet.Sheet {
   return sheet
 }
 
-/**
- * Set spreadsheet ID as script property (called from setup:sheet script).
- */
-export function setSpreadsheetId(id: string): { success: boolean; id: string } {
-  PropertiesService.getScriptProperties().setProperty('SPREADSHEET_ID', id)
-  return { success: true, id }
-}
 
 function getCount(): number {
   const value = getSheet().getRange(COUNTER_CELL).getValue()
@@ -80,13 +73,6 @@ export function apiGet(
     case 'getCount':
       return { count: getCount() }
 
-    case 'getConfig': {
-      const props = PropertiesService.getScriptProperties()
-      return {
-        spreadsheetId: props.getProperty('SPREADSHEET_ID') || '',
-      }
-    }
-
     case 'ping':
       return { message: 'pong', timestamp: new Date().toISOString() }
 
@@ -116,13 +102,6 @@ export function apiPost(
     case 'setCount': {
       const value = Number(data.value) || 0
       return { count: setCount(value) }
-    }
-
-    case 'setSpreadsheetId': {
-      const id = String(data.id || '').trim()
-      if (!id) throw new Error('Spreadsheet ID is required')
-      PropertiesService.getScriptProperties().setProperty('SPREADSHEET_ID', id)
-      return { success: true, spreadsheetId: id }
     }
 
     default:
