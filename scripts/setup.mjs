@@ -9,7 +9,7 @@
  */
 
 import { execSync, spawnSync } from 'child_process'
-import { existsSync, readFileSync, writeFileSync, unlinkSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync, unlinkSync, copyFileSync } from 'fs'
 import * as readline from 'readline'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
@@ -17,6 +17,7 @@ import { dirname, join } from 'path'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
 const CLASP_JSON = join(ROOT, '.clasp.json')
+const APPSSCRIPT_JSON = join(ROOT, 'appsscript.json')
 
 function prompt(question) {
   const rl = readline.createInterface({
@@ -74,7 +75,13 @@ async function main() {
   // 2. Get project title
   const title = (await prompt('プロジェクト名 (デフォルト: "GAS React App"): ')) || 'GAS React App'
 
-  // 3. Create standalone script (appsscript.json provides webapp config)
+  // 3. Backup appsscript.json (clasp create overwrites it)
+  const appsscriptBackup = join(ROOT, 'appsscript.json.bak')
+  if (existsSync(APPSSCRIPT_JSON)) {
+    copyFileSync(APPSSCRIPT_JSON, appsscriptBackup)
+  }
+
+  // 4. Create standalone script
   console.log(`\n📦 GASプロジェクトを作成中: "${title}"...`)
   const result = run(['clasp', 'create', '--title', title])
 
@@ -85,6 +92,13 @@ async function main() {
     process.exit(1)
   }
   process.stdout.write(result.stdout || '')
+
+  // 5. Restore appsscript.json (with webapp config)
+  if (existsSync(appsscriptBackup)) {
+    copyFileSync(appsscriptBackup, APPSSCRIPT_JSON)
+    unlinkSync(appsscriptBackup)
+    console.log('✅ appsscript.json を復元しました (webapp設定を維持)')
+  }
 
   // clasp create writes .clasp.json to cwd
   if (!existsSync(CLASP_JSON)) {
