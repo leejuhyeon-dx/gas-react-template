@@ -8,9 +8,29 @@
  * - apiPost: POST API dispatcher
  */
 
-/**
- * Web app entry point - serves the React SPA.
- */
+const SHEET_NAME = 'Counter'
+const COUNTER_CELL = 'A1'
+
+function getSheet(): GoogleAppsScript.Spreadsheet.Sheet {
+  const ss = SpreadsheetApp.getActiveSpreadsheet()
+  let sheet = ss.getSheetByName(SHEET_NAME)
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_NAME)
+    sheet.getRange(COUNTER_CELL).setValue(0)
+  }
+  return sheet
+}
+
+function getCount(): number {
+  const value = getSheet().getRange(COUNTER_CELL).getValue()
+  return typeof value === 'number' ? value : 0
+}
+
+function setCount(value: number): number {
+  getSheet().getRange(COUNTER_CELL).setValue(value)
+  return value
+}
+
 export function doGet() {
   return HtmlService.createTemplateFromFile('index')
     .evaluate()
@@ -18,44 +38,48 @@ export function doGet() {
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
 }
 
-/**
- * Include HTML partials (used for the GAS include pattern).
- */
 export function include(filename: string) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent()
 }
 
-/**
- * GET API dispatcher.
- * Add your read actions here.
- */
 export function apiGet(
   action: string,
-  params: Record<string, string> = {}
+  _params: Record<string, string> = {}
 ): unknown {
   switch (action) {
+    case 'getCount':
+      return { count: getCount() }
+
     case 'ping':
       return { message: 'pong', timestamp: new Date().toISOString() }
-
-    case 'hello':
-      return { message: `Hello, ${params.name || 'World'}!` }
 
     default:
       throw new Error(`Unknown GET action: ${action}`)
   }
 }
 
-/**
- * POST API dispatcher.
- * Add your write actions here.
- */
 export function apiPost(
   action: string,
   data: Record<string, unknown> = {}
 ): unknown {
   switch (action) {
-    case 'echo':
-      return { echo: data }
+    case 'increment': {
+      const current = getCount()
+      return { count: setCount(current + 1) }
+    }
+
+    case 'decrement': {
+      const current = getCount()
+      return { count: setCount(current - 1) }
+    }
+
+    case 'reset':
+      return { count: setCount(0) }
+
+    case 'setCount': {
+      const value = Number(data.value) || 0
+      return { count: setCount(value) }
+    }
 
     default:
       throw new Error(`Unknown POST action: ${action}`)

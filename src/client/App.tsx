@@ -9,8 +9,8 @@ export function App() {
         <nav className="bg-white border-b border-gray-200 px-4 py-3">
           <div className="max-w-2xl mx-auto flex items-center gap-6">
             <span className="font-bold text-gray-900">GAS+React</span>
-            <Link to="/" className="text-gray-600 hover:text-gray-900">Home</Link>
-            <Link to="/about" className="text-gray-600 hover:text-gray-900">About</Link>
+            <Link to="/" className="text-gray-600 hover:text-gray-900">ホーム</Link>
+            <Link to="/about" className="text-gray-600 hover:text-gray-900">について</Link>
           </div>
         </nav>
         <Routes>
