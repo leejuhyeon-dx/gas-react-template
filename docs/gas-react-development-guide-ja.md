@@ -19,10 +19,11 @@ Google Apps Script (GAS) を使えば、Googleのインフラ上にWebアプリ�
 5. [プロジェクト構成](#5-プロジェクト構成)
 6. [ビルドの仕組み](#6-ビルドの仕組み)
 7. [クライアント・サーバー間通信](#7-クライアントサーバー間通信)
-8. [開発ワークフロー](#8-開発ワークフロー)
-9. [機能追加：実践ガイド](#9-機能追加実践ガイド)
-10. [デプロイ](#10-デプロイ)
-11. [注意点と制約](#11-注意点と制約)
+8. [ローカル開発（Vite + モックAPI）](#8-ローカル開発vite--モックapi)
+9. [開発ワークフロー](#9-開発ワークフロー)
+10. [機能追加：実践ガイド](#10-機能追加実践ガイド)
+11. [デプロイ](#11-デプロイ)
+12. [注意点と制約](#12-注意点と制約)
 
 ---
 
@@ -290,20 +291,21 @@ gas-react-template/
 │
 ├── src/
 │   ├── client/                  # Reactフロントエンド
-│   │   ├── main.tsx             # エントリー：<App />を#rootにレンダリング
+│   │   ├── main.tsx             # エントリー：<App />を#rootにレンダリング + CSS import
 │   │   ├── App.tsx              # ルートコンポーネント + HashRouterルーティング
 │   │   ├── api/
-│   │   │   └── base.ts          # google.script.run Promiseラッパー
+│   │   │   └── base.ts          # APIクライアント（GAS: google.script.run / Dev: モック）
 │   │   ├── pages/
-│   │   │   ├── HomePage.tsx     # ホームページ
+│   │   │   ├── HomePage.tsx     # ホームページ（カウンターデモ）
 │   │   │   └── AboutPage.tsx    # Aboutページ
 │   │   └── styles/
 │   │       └── index.css        # Tailwindディレクティブ (@tailwind base/components/utilities)
 │   │
 │   └── server/                  # GASバックエンド
-│       └── index.ts             # doGet, include, apiGet, apiPost
+│       └── index.ts             # doGet, include, apiGet, apiPost + Sheetsカウンター
 │
 ├── scripts/
+│   ├── setup.mjs                # 初期セットアップ（clasp login + create + push）
 │   ├── build.mjs                # esbuild + Babel + HTML生成
 │   └── deploy.mjs               # ビルド + プッシュ + claspデプロイ
 │
@@ -313,6 +315,9 @@ gas-react-template/
 │   ├── Code.gs                  # サーバーコード
 │   └── appsscript.json          # GASマニフェスト
 │
+├── index.html                   # Vite用エントリーHTML（開発モード専用）
+├── vite.config.ts               # Vite設定
+├── postcss.config.js            # PostCSS設定（Tailwind + Autoprefixer）
 ├── .clasp.json                  # clasp設定（スクリプトID、デプロイメントID）
 ├── appsscript.json              # GASマニフェスト（スコープ、webapp設定）
 ├── package.json                 # 依存関係とスクリプト
@@ -475,7 +480,88 @@ GASサーバー (Code.gs)
 
 ---
 
-## 8. 開発ワークフロー
+## 8. ローカル開発（Vite + モックAPI）
+
+### なぜローカル開発サーバーが必要か
+
+GASへのデプロイは毎回 `build → push → ブラウザリフレッシュ` のサイクルが必要で、UI開発では非効率。Vite開発サーバーを使えば、コード変更が即座にブラウザに反映される（HMR）。
+
+### 起動方法
+
+```bash
+pnpm run dev
+```
+
+Viteが `http://localhost:5173` で起動する。
+
+### モックAPIの仕組み
+
+`src/client/api/base.ts` が実行環境を自動判定する：
+
+```typescript
+const isGas = typeof google !== 'undefined' && !!google?.script?.run
+
+export function gasCall<T>(action, method, data): Promise<T> {
+  if (!isGas) {
+    // Vite環境 → インメモリのモックAPIを使用
+    return mockResponse(action, method, data)
+  }
+  // GAS環境 → google.script.run を使用
+  return gasResponse(action, method, data)
+}
+```
+
+**開発モード（Vite）**: `google.script.run` が存在しないため、モックAPIが自動的に使われる。モックは `setTimeout(100ms)` で API遅延を再現。
+
+**本番モード（GAS）**: `google.script.run` が存在するため、実際のGAS関数を呼び出す。
+
+### モックAPIの追加方法
+
+新しいAPIアクションを追加する場合、`src/client/api/base.ts` のモック関数にも追加する：
+
+```typescript
+// サーバー側（src/server/index.ts）に追加
+case 'tasks':
+  return { tasks: getTasksFromSheet() }
+
+// モック側（src/client/api/base.ts）にも追加
+function mockApiGet(action: string, _params?: Record<string, string>): unknown {
+  switch (action) {
+    case 'tasks':
+      return { tasks: [{ id: '1', title: 'Sample', status: 'todo' }] }
+    // ...
+  }
+}
+```
+
+### デモ：カウンター機能
+
+テンプレートにはGoogle Sheetsと連携するカウンターデモが含まれている：
+
+| 環境 | データ保存先 | 動作 |
+|------|------------|------|
+| Vite (`pnpm run dev`) | メモリ内変数 | ページリロードでリセット |
+| GAS (`pnpm run push`) | スプレッドシート「Counter」シート A1セル | 永続化 |
+
+サーバー側のカウンターAPI（`src/server/index.ts`）：
+- `apiGet('getCount')` — 現在値を取得
+- `apiPost('increment')` — +1
+- `apiPost('decrement')` — -1
+- `apiPost('reset')` — 0にリセット
+
+### Vite vs GASビルドの違い
+
+| 項目 | `pnpm run dev`（Vite） | `pnpm run build`（GAS） |
+|------|----------------------|------------------------|
+| エントリーHTML | `index.html`（ルート） | `build/index.html`（生成） |
+| CSS処理 | Vite + PostCSS（HMR対応） | Tailwind CLI → インライン |
+| JSバンドル | Vite（ESM、開発モード） | esbuild（IIFE、ミニファイ） |
+| API | モック（インメモリ） | google.script.run |
+| テンプレートリテラル | そのまま | Babel変換 |
+
+---
+
+## 9. 開発ワークフロー
 
 ### 初期セットアップ
 
@@ -487,47 +573,53 @@ cd my-app
 # 2. 依存関係をインストール
 pnpm install
 
-# 3. script.google.comでGASプロジェクトを作成
-#    プロジェクト設定からスクリプトIDをコピー
+# 3. ローカルで動作確認
+pnpm run dev
+# → http://localhost:5173 でカウンターデモが動作
 
-# 4. claspを設定
-#    .clasp.jsonを編集 → "scriptId": "YOUR_SCRIPT_ID"を設定
+# 4. GASプロジェクト作成（自動セットアップ）
+pnpm run setup
+# → clasp login + プロジェクト作成 + ビルド + プッシュ + デプロイ
+```
 
-# 5. claspにログイン
+手動セットアップの場合：
+```bash
 pnpm exec clasp login
-
-# 6. ビルドしてプッシュ
+pnpm exec clasp create --title "My App"
+# .clasp.json の rootDir を "build" に設定
 pnpm run push
 ```
 
 ### 開発サイクル
 
-GASにはホットリロードがない。開発サイクルは：
-
+**UI開発（高速イテレーション）：**
 ```
-コード編集 → ビルド → プッシュ → ブラウザリフレッシュ
+pnpm run dev → コード編集 → 自動リロード（HMR）
 ```
 
-```bash
-# ビルド + プッシュを1コマンドで
-pnpm run push
-
-# ビルドのみ（出力を確認したい場合）
-pnpm run build
+**GAS統合テスト：**
 ```
+コード編集 → pnpm run push → ブラウザリフレッシュ
+```
+
+推奨フロー：
+1. `pnpm run dev` でUI/ロジックを開発（モックAPI使用）
+2. 動作確認後 `pnpm run push` でGASにデプロイして統合テスト
 
 ### コマンドリファレンス
 
 | コマンド | 内容 |
 |---------|------|
-| `pnpm run build` | クライアント + サーバー + HTMLをビルド |
+| `pnpm run dev` | Vite開発サーバー（モックAPI、HMR対応） |
+| `pnpm run setup` | 初期セットアップ（clasp login + 作成 + デプロイ） |
+| `pnpm run build` | クライアント + サーバー + HTMLをビルド（GAS向け） |
 | `pnpm run push` | ビルド + GASにプッシュ |
 | `pnpm run deploy` | ビルド + プッシュ + デプロイ（dev） |
 | `pnpm run deploy:production` | ビルド + プッシュ + デプロイ（production） |
 
 ---
 
-## 9. 機能追加：実践ガイド
+## 10. 機能追加：実践ガイド
 
 ### 例：Google Sheetsを使った「タスク」機能の追加
 
@@ -640,7 +732,7 @@ pnpm run push
 
 ---
 
-## 10. デプロイ
+## 11. デプロイ
 
 ### 開発デプロイ
 
@@ -693,7 +785,7 @@ https://script.google.com/macros/s/<DEPLOYMENT_ID>/exec
 
 ---
 
-## 11. 注意点と制約
+## 12. 注意点と制約
 
 ### GASの制限
 
@@ -710,15 +802,14 @@ https://script.google.com/macros/s/<DEPLOYMENT_ID>/exec
 
 **HashRouter**（`/#/path`）を使用すること。BrowserRouterは使えない。GASはHTML5 History APIをサポートしない — すべてのURLが同じ`doGet()`エンドポイントにヒットする。HashRouterならルーティングがクライアント側で完結する。
 
-### 開発サーバーなし
+### Vite開発サーバーの制約
 
-`localhost`の開発サーバーはない。テストにはGASへのプッシュが必須：
+`pnpm run dev` でローカル開発が可能だが、以下に注意：
 
-```
-編集 → pnpm run push → ブラウザリフレッシュ
-```
-
-UI変更のみの高速イテレーションには、モックデータを使ったローカルVite開発サーバーで一時的にコンポーネントをレンダリングできるが、フル統合テストには常にGASが必要。
+- **モックAPIはインメモリ** — ページリロードでデータがリセットされる
+- **GAS固有のAPIは使えない** — `SpreadsheetApp`、`GmailApp`等はGAS環境でのみ動作
+- **モックの同期が必要** — サーバーにAPIを追加したら、モック側にも追加する必要がある
+- **フル統合テストにはGASが必須** — `pnpm run push` でデプロイして確認
 
 ### ビルド出力のテンプレートリテラル
 
