@@ -2,43 +2,39 @@
   "name": "gas-react-template",
   "version": "0.1.0",
   "private": true,
-  "description": "Minimal template for building web apps on Google Apps Script with React",
+  "description": "Monorepo template for building web apps on Google Apps Script with React + gsquery",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "setup": "node scripts/setup.mjs",
-    "setup:sheet": "node scripts/set-sheet-id.mjs",
+    "dev:client": "pnpm --filter @gas-app/client dev",
+    "dev:server": "pnpm --filter @gas-app/dev-server dev",
+    "dev": "concurrently -n client,server -c blue,green \"pnpm dev:client\" \"pnpm dev:server\"",
     "build": "node scripts/build.mjs",
     "push": "node scripts/build.mjs && pnpm exec clasp push --force",
     "deploy": "node scripts/deploy.mjs dev",
     "deploy:dev": "node scripts/deploy.mjs dev",
-    "deploy:production": "node scripts/deploy.mjs production"
-  },
-  "dependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^7.13.0"
+    "deploy:production": "node scripts/deploy.mjs production",
+    "typecheck": "tsc -b packages/core packages/client packages/gas-server",
+    "setup": "node scripts/setup.mjs",
+    "setup:sheet": "node scripts/set-sheet-id.mjs"
   },
   "devDependencies": {
     "@babel/core": "^7.29.0",
     "@babel/plugin-transform-template-literals": "^7.27.1",
     "@google/clasp": "^3.2.0",
     "@types/google-apps-script": "^2.0.8",
-    "@types/react": "^18.3.28",
-    "@types/react-dom": "^18.3.7",
-    "@vitejs/plugin-react": "^5.1.4",
-    "autoprefixer": "^10.4.24",
+    "concurrently": "^9.1.2",
     "esbuild": "^0.27.3",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^3.4.19",
-    "typescript": "^5.9.3",
-    "vite": "^7.3.1"
+    "typescript": "^5.9.3"
   },
   "author": "juhyeonni",
   "license": "MIT",
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild"
-    ]
+    ],
+    "overrides": {
+      "@types/react": "^18.3.28",
+      "@types/react-dom": "^18.3.7"
+    }
   }
 }

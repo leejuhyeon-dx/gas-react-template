@@ -1,10 +1,13 @@
-import { HashRouter, Routes, Route, Link } from 'react-router-dom'
-import { HomePage } from './pages/HomePage'
-import { AboutPage } from './pages/AboutPage'
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import { Link } from 'react-router-dom'
+import { RouterProvider } from './providers/router'
+import { AppRoutes } from './routes/routes'
+import './styles/index.css'
 
-export function App() {
+function App() {
   return (
-    <HashRouter>
+    <RouterProvider>
       <div className="min-h-screen bg-gray-50">
         <nav className="bg-white border-b border-gray-200 px-4 py-3">
           <div className="max-w-2xl mx-auto flex items-center gap-6">
@@ -13,11 +16,14 @@ export function App() {
             <Link to="/about" className="text-gray-600 hover:text-gray-900">について</Link>
           </div>
         </nav>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/about" element={<AboutPage />} />
-        </Routes>
+        <AppRoutes />
       </div>
-    </HashRouter>
+    </RouterProvider>
   )
 }
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+)

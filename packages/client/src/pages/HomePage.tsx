@@ -1,15 +1,15 @@
 import { useState, useEffect, useCallback } from 'react'
-import { apiGet, apiPost } from '../api/base'
+import { fetchCount, incrementCount, decrementCount, resetCount } from '@/entities/counter'
 
 export function HomePage() {
   const [count, setCount] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchCount = useCallback(async () => {
+  const loadCount = useCallback(async () => {
     try {
       setError(null)
-      const res = await apiGet<{ count: number }>('getCount')
+      const res = await fetchCount()
       setCount(res.count)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'エラーが発生しました')
@@ -19,13 +19,13 @@ export function HomePage() {
   }, [])
 
   useEffect(() => {
-    fetchCount()
-  }, [fetchCount])
+    loadCount()
+  }, [loadCount])
 
-  const handleAction = async (action: string) => {
+  const handleAction = async (action: () => Promise<{ count: number }>) => {
     try {
       setError(null)
-      const res = await apiPost<{ count: number }>(action)
+      const res = await action()
       setCount(res.count)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'エラーが発生しました')
@@ -59,19 +59,19 @@ export function HomePage() {
             </div>
             <div className="flex justify-center gap-3">
               <button
-                onClick={() => handleAction('decrement')}
+                onClick={() => handleAction(decrementCount)}
                 className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold text-lg transition-colors"
               >
                 -1
               </button>
               <button
-                onClick={() => handleAction('reset')}
+                onClick={() => handleAction(resetCount)}
                 className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm text-gray-600 transition-colors"
               >
                 リセット
               </button>
               <button
-                onClick={() => handleAction('increment')}
+                onClick={() => handleAction(incrementCount)}
                 className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold text-lg transition-colors"
               >
                 +1
@@ -81,7 +81,7 @@ export function HomePage() {
         )}
 
         <p className="text-xs text-gray-400 mt-6 text-center">
-          値はスプレッドシートの「Counter」シート A1 セルに保存されます
+          値はスプレッドシートの「Counter」テーブルに保存されます
         </p>
       </div>
 
@@ -89,8 +89,9 @@ export function HomePage() {
         <h2 className="text-lg font-semibold text-blue-800 mb-2">はじめに</h2>
         <ol className="list-decimal list-inside text-blue-700 space-y-1">
           <li><code className="bg-blue-100 px-1 rounded">pnpm run setup</code> でGASプロジェクトを作成</li>
-          <li><code className="bg-blue-100 px-1 rounded">pnpm run build</code> でビルド</li>
-          <li><code className="bg-blue-100 px-1 rounded">pnpm run push</code> でGASにデプロイ</li>
+          <li><code className="bg-blue-100 px-1 rounded">pnpm dev</code> でローカル開発サーバーを起動</li>
+          <li><code className="bg-blue-100 px-1 rounded">pnpm build</code> でビルド</li>
+          <li><code className="bg-blue-100 px-1 rounded">pnpm push</code> でGASにデプロイ</li>
         </ol>
       </div>
     </div>
