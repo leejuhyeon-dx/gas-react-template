@@ -111,7 +111,7 @@ pnpm run deploy  # ビルド + プッシュ + デプロイ (dev)
 
 ## gsquery について
 
-[gsquery](https://github.com/juhyeonni/gsquery) は Google Sheets 向けの TypeScript ORM ライブラリです。
+[gsquery](https://github.com/juhyeonni/gas-sheets-query) は Google Sheets 向けの TypeScript ORM ライブラリです。
 
 - **スキーマ定義** → CLI でコード生成 (`types.ts`, `client.ts`)
 - **アダプタパターン**: `SheetsAdapter` (本番) / `MockAdapter` (開発・テスト)
