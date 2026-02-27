@@ -1,0 +1,7 @@
+tables:
+  Counter:
+    fields:
+      id: string @id
+      value: number @default(0)
+      updatedAt: string @updatedAt
+    map: Counter

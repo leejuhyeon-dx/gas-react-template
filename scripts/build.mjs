@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Build script for GAS + React Template
- * - Bundles React app with esbuild
- * - Transpiles server TypeScript to GAS-compatible .gs
+ * Build script for GAS + React Monorepo Template
+ * - Bundles React app (packages/client) with esbuild
+ * - Transpiles server TypeScript (packages/gas-server + core) to GAS-compatible .gs
  * - Generates HTML template for GAS HtmlService
  */
 
@@ -15,8 +15,9 @@ import * as babel from '@babel/core'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
-const SRC_CLIENT = path.join(ROOT, 'src/client')
-const SRC_SERVER = path.join(ROOT, 'src/server')
+const SRC_CLIENT = path.join(ROOT, 'packages/client/src')
+const SRC_SERVER = path.join(ROOT, 'packages/gas-server/src')
+const SRC_CORE = path.join(ROOT, 'packages/core/src')
 const DIST = path.join(ROOT, 'dist')
 const BUILD = path.join(ROOT, 'build')
 
@@ -24,7 +25,7 @@ async function buildClient() {
   console.log('📦 Building client...')
 
   await esbuild.build({
-    entryPoints: [path.join(SRC_CLIENT, 'main.tsx')],
+    entryPoints: [path.join(SRC_CLIENT, 'app/index.tsx')],
     bundle: true,
     minify: true,
     format: 'iife',
@@ -40,6 +41,13 @@ async function buildClient() {
     jsx: 'automatic',
     alias: {
       '@': SRC_CLIENT,
+      '@/app': path.join(SRC_CLIENT, 'app'),
+      '@/pages': path.join(SRC_CLIENT, 'pages'),
+      '@/entities': path.join(SRC_CLIENT, 'entities'),
+      '@/features': path.join(SRC_CLIENT, 'features'),
+      '@/widgets': path.join(SRC_CLIENT, 'widgets'),
+      '@/shared': path.join(SRC_CLIENT, 'shared'),
+      '@gas-app/core': SRC_CORE,
     },
   })
 
@@ -49,9 +57,10 @@ async function buildClient() {
 async function buildCss() {
   console.log('📦 Building CSS...')
 
+  const clientDir = path.join(ROOT, 'packages/client')
   execSync(
-    `pnpm exec tailwindcss -c "${path.join(ROOT, 'tailwind.config.js')}" -i "${path.join(SRC_CLIENT, 'styles/index.css')}" -o "${path.join(DIST, 'app.css')}" --minify`,
-    { cwd: ROOT, stdio: 'inherit' }
+    `pnpm exec tailwindcss -c "${path.join(clientDir, 'tailwind.config.js')}" -i "${path.join(SRC_CLIENT, 'app/styles/index.css')}" -o "${path.join(DIST, 'app.css')}" --minify`,
+    { cwd: clientDir, stdio: 'inherit' }
   )
 
   console.log('✅ CSS built')
@@ -84,6 +93,14 @@ async function buildServer() {
     define: {
       '__SPREADSHEET_ID__': JSON.stringify(spreadsheetId),
     },
+    alias: {
+      '@gas-app/core': SRC_CORE,
+      '@gas-app/core/config': path.join(SRC_CORE, 'config/index.ts'),
+      '@gas-app/core/services': path.join(SRC_CORE, 'services/index.ts'),
+      '@gas-app/core/api': path.join(SRC_CORE, 'api/index.ts'),
+      '@gas-app/core/lib': path.join(SRC_CORE, 'lib/index.ts'),
+    },
+    external: [],
   })
 
   let code = fs.readFileSync(path.join(DIST, 'Code.js'), 'utf-8')
@@ -102,8 +119,6 @@ async function buildServer() {
 
 /**
  * Escape JS for embedding in HTML (GAS include() pattern).
- * - </script> would close the script tag; use <\/script>.
- * - :// in strings (e.g. "http://") can be parsed as comment by GAS document.write; use \u002F\u002F.
  */
 function escapeJsForGas(js) {
   let out = js
@@ -114,7 +129,6 @@ function escapeJsForGas(js) {
 
 /**
  * Babel: transform template literals only (GAS compatibility).
- * Converts backticks to string concat so GAS document.write/parsing does not break.
  */
 async function transformForGAS(code) {
   const result = await babel.transformAsync(code, {
@@ -155,6 +169,26 @@ async function generateHtml() {
 </head>
 <body>
   <div id="root"></div>
+  <script>
+    // === URL Routing Bootstrap ===
+    var __INITIAL_PATH__ = "<?= initialPath ?>";
+    var __ROUTE_RESOLVED__ = false;
+
+    if (__INITIAL_PATH__) {
+      window.location.hash = "#" + __INITIAL_PATH__;
+      __ROUTE_RESOLVED__ = true;
+    }
+
+    if (!__ROUTE_RESOLVED__ && typeof google !== "undefined" && google.script && google.script.url) {
+      google.script.url.getLocation(function(loc) {
+        if (loc.hash) {
+          var h = loc.hash;
+          if (h.charAt(0) !== "/") h = "/" + h;
+          window.location.hash = "#" + h;
+        }
+      });
+    }
+  </script>
   <script>
     window.gasApi = {
       get: function(action, params) {
